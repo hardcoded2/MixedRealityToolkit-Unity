@@ -104,7 +104,11 @@ namespace Microsoft.MixedReality.Toolkit.Utilities
             bool disposeCertificateHandlerOnDispose = true,
             CancellationToken cancellationToken = default(CancellationToken))
         {
+#if UNITY_2022_2_OR_NEWER
+            using (var webRequest = UnityWebRequest.PostWwwForm(query, null as string))
+#else
             using (var webRequest = UnityWebRequest.Post(query, null as string))
+#endif
             {
                 cancellationToken.Register(() =>
                 {
@@ -165,7 +169,11 @@ namespace Microsoft.MixedReality.Toolkit.Utilities
             bool disposeCertificateHandlerOnDispose = true,
             CancellationToken cancellationToken = default(CancellationToken))
         {
+#if UNITY_2022_2_OR_NEWER
+            using (var webRequest = UnityWebRequest.PostWwwForm(query, "POST"))
+#else
             using (var webRequest = UnityWebRequest.Post(query, "POST"))
+#endif
             {
                 cancellationToken.Register(() =>
                 {
@@ -201,7 +209,11 @@ namespace Microsoft.MixedReality.Toolkit.Utilities
             bool disposeCertificateHandlerOnDispose = true,
             CancellationToken cancellationToken = default(CancellationToken))
         {
+#if UNITY_2022_2_OR_NEWER
+            using (var webRequest = UnityWebRequest.PostWwwForm(query, "POST"))
+#else
             using (var webRequest = UnityWebRequest.Post(query, "POST"))
+#endif
             {
                 cancellationToken.Register(() =>
                 {
@@ -351,6 +363,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities
             long responseCode = webRequest.responseCode;
             Func<byte[]> downloadHandlerDataAction = () => webRequest.downloadHandler?.data;
             Func<string> downloadHandlerTextAction = () => webRequest.downloadHandler?.text;
+            Task<string> downloadHandlerTextTask = ResponseUtils.BytesToString(downloadHandlerDataAction.Invoke());
 
 #if UNITY_2020_1_OR_NEWER
             if (webRequest.result == UnityWebRequest.Result.ConnectionError || webRequest.result == UnityWebRequest.Result.ProtocolError)
@@ -366,14 +379,14 @@ namespace Microsoft.MixedReality.Toolkit.Utilities
                 }
 
                 string responseHeaders = webRequest.GetResponseHeaders().Aggregate(string.Empty, (current, header) => $"\n{header.Key}: {header.Value}");
-                string downloadHandlerText = downloadHandlerTextAction.Invoke();
+                string downloadHandlerText = await downloadHandlerTextTask;
                 Debug.LogError($"REST Error: {responseCode}\n{downloadHandlerText}{responseHeaders}");
                 return new Response(false, $"{responseHeaders}\n{downloadHandlerText}", downloadHandlerDataAction.Invoke(), responseCode);
             }
 
             if (readResponseData)
             {
-                return new Response(true, downloadHandlerTextAction.Invoke(), downloadHandlerDataAction.Invoke(), responseCode);
+                return new Response(true, await downloadHandlerTextTask, downloadHandlerDataAction.Invoke(), responseCode);
             }
             else // This option can be used only if action will be triggered in the same scope as the webrequest
             {
